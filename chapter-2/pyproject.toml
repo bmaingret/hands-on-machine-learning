@@ -1,0 +1,19 @@
+[project]
+name = "chapter2"
+requires-python = 3.10
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = "E203"
+
+[tool.isort]
+profile = "black"
+src_paths = ["chapter2"]
+
+[tool.pylint.messages_control]
+disable = "C0330, C0326"
+
+[tool.pylint.format]
+max-line-length = "88"
+ignore-long-lines = '''^\s*(# )?<?https?:\/\/\S+>?$|^\s*(\w*\s*=\s*)?(\"|\').*(\"|\'),?\s*$'''
+disable = "logging-fstring-interpolation"

@@ -1,0 +1,14 @@
+# local package
+-e .
+
+-r requirements.txt
+
+# dev
+black[jupyter]
+isort
+pylint
+bandit
+
+# notebooks
+matplotlib
+jupyter
