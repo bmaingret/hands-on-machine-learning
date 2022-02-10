@@ -1,33 +1,77 @@
-.PHONY: clean data raw lint requirements
+# https://github.com/aresponses/aresponses/blob/master/Makefile
+
+.PHONY: clean require_pyenv init dev alint autoformat lint requirements
 
 #################################################################################
 # GLOBALS                                                                       #
 #################################################################################
 
+SHELL := /bin/bash
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+PROJECT_NAME = chapter_2
 PROJECT_SRC = chapter2
-PYTHON_INTERPRETER = python3
-
+PYTHON_VERSION = 3.10.0
+VENV_NAME = hands-on-machine-learning
+PYENV_INSTRUCTIONS=https://github.com/pyenv/pyenv#installation
+PYENV_VIRT_INSTRUCTIONS=https://github.com/pyenv/pyenv-virtualenv#pyenv-virtualenv
 
 #################################################################################
 # COMMANDS                                                                      #
 #################################################################################
 
+## Check pyenv and pyenv-virtualenv installations
+require_pyenv:
+	@if ! [ -x "$$(command -v pyenv)" ]; then\
+	  echo -e '\n\033[0;31m ❌ pyenv is not installed.  Follow instructions here: $(pyenv_instructions)\n\033[0m';\
+	  exit 1;\
+	else\
+	  echo -e "\033[0;32m ✔️  pyenv installed\033[0m";\
+	fi
+	@if ! [[ "$$(pyenv virtualenv --version)" == *"pyenv-virtualenv"* ]]; then\
+	  echo -e '\n\033[0;31m ❌ pyenv virtualenv is not installed.  Follow instructions here: $(pyenv_virt_instructions) \n\033[0m';\
+	  exit 1;\
+	else\
+	  echo -e "\033[0;32m ✔️  pyenv-virtualenv installed\033[0m";\
+	fi
+
+## Setup a dev environment for local development.
+init: require_pyenv  
+	@pyenv install $(PYTHON_VERSION) -s
+	@echo -e "\033[0;32m ✔️  🐍 $(PYTHON_VERSION) installed \033[0m"
+	@if ! [ -d "$$(pyenv root)/versions/$(VENV_NAME)" ]; then\
+		pyenv virtualenv $(PYTHON_VERSION) $(VENV_NAME);\
+	fi;
+	@pyenv local $(VENV_NAME)
+	@echo -e "\033[0;32m ✔️  🐍 $(VENV_NAME) virtualenv activated \033[0m"
+	python -m pip install --upgrade pip
+	@echo -e "\nEnvironment setup! ✨ 🍰 ✨ 🐍 \n\n"
+	@echo -e "\033[0;32m"
+	@pyenv which python
+	@echo -e "\n\033[0m"
+	@echo -e "You should probably run make requirements or make dev.\n"
+	@make -s help	
+
+
 ## Install Python Dependencies
-requirements: test_environment
-	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
-	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+requirements: init
+	python -m pip install -r requirements.txt
 
-dev: requirements
-	$(PYTHON_INTERPRETER) -m pip install -r requirements-dev.txt
+## Install development dependencies
+dev:
+	python -m pip install -r requirements-dev.txt
 
-## Make Dataset
-data: requirements
-	$(PYTHON_INTERPRETER) -m chapter2.etl.pipeline
+## Shortcut for autoformat and lint - Requires to have run make dev
+alint: autoformat lint
 
-## Make Features
-features: data
-	$(PYTHON_INTERPRETER) -m chapter2.features.make_features
+## Autoformat  using black and isort - Requires to have run make dev
+autoformat:
+	black $(PROJECT_SRC) notebooks
+	isort --atomic $(PROJECT_SRC)
+
+## Lint pylint and bandit - Requires to have run make dev
+lint:
+	python -m pylint $(PROJECT_SRC)
+	bandit -r $(PROJECT_SRC)
 
 ## Delete all compiled Python files
 clean:
@@ -35,32 +79,17 @@ clean:
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name "*.egg-info" -delete
 
-## Shortcut for superlinter
-slint: superlinter
-
-## Autoformat and lint using black, isort, pylint, bandit
-superlinter:
-	black $(PROJECT_SRC) notebooks
-	isort --atomic $(PROJECT_SRC)
-	$(PYTHON_INTERPRETER) -m pylint $(PROJECT_SRC)
-	bandit -r $(PROJECT_SRC)
-
-## Set up python interpreter environment
-create_environment:
-	$(PYTHON_INTERPRETER) -m pip install -q virtualenv virtualenvwrapper
-	@echo ">>> Installing virtualenvwrapper if not already installed.\nMake sure the following lines are in shell startup file\n\
-	export WORKON_HOME=$$HOME/.virtualenvs\nexport PROJECT_HOME=$$HOME/Devel\nsource /usr/local/bin/virtualenvwrapper.sh\n"
-	@bash -c "source `which virtualenvwrapper.sh`;mkvirtualenv $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER)"
-	@echo ">>> New virtualenv created. Activate with:\nworkon $(PROJECT_NAME)"
-
-## Test python environment is setup correctly
-test_environment:
-	$(PYTHON_INTERPRETER) test_environment.py
-
 #################################################################################
 # PROJECT RULES                                                                 #
 #################################################################################
 
+## Make Dataset - Requires to have run make requirements
+data:
+	python -m chapter2.etl.pipeline
+
+## Make Features - Requires to have run make requirements
+features: data
+	python -m chapter2.features.make_features
 
 
 #################################################################################
