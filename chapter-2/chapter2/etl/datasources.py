@@ -9,11 +9,20 @@ import os
 import pathlib
 import tarfile
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Dict
 
 import requests
 
 logger = logging.getLogger(__name__)
+
+
+class DataDirectory(Enum):
+    """Enum for intermediate data directories"""
+
+    RAW = "raw"
+    INTERIM = "interim"
+    PROCESSED = "processed"
 
 
 @dataclass(frozen=True)
@@ -122,6 +131,6 @@ class Datasources:
         return
 
 
-def _save_path(root_data_dir, data_subdir, name):
-    save_path = pathlib.Path(root_data_dir).joinpath(data_subdir).joinpath(name)
-    return save_path
+# def _save_path(root_data_dir, data_subdir, name):
+#     save_path = pathlib.Path(root_data_dir).joinpath(data_subdir).joinpath(name)
+#     return save_path

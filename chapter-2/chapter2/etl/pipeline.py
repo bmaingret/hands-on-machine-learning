@@ -2,8 +2,12 @@
 usable to build features."""
 
 import logging
+import os
+import pathlib
 
-from chapter2 import conf, etl
+from chapter2 import utils
+from chapter2.etl import io, preprocessing
+from chapter2.etl.datasources import DataDirectory, Datasources
 
 logger = logging.getLogger(__name__)
 
@@ -15,25 +19,42 @@ def run():
 
     logger.info("prep data set from raw data for feature building")
 
-    housing_path = conf.datasources.get_data("housing")
-    housing = etl.io.load_data(housing_path)
-    train, test = etl.preprocessing.train_test_split(housing)
+    utils.load_dotenv()
+    root_data_dir = pathlib.Path(os.getenv("ROOT_DATA_DIR"))
 
-    train_save_path = etl.io.get_path(
-        data_subdir=conf.DataDirectory.INTERIM, filename="housing_train.csv"
+    datasources = Datasources(data_dir=root_data_dir.joinpath(DataDirectory.RAW.value))
+    datasources.add_datasource(
+        name="housing",
+        download_url="https://raw.githubusercontent.com/ageron/handson-ml2/master/datasets/housing/housing.tgz",
+        download_filename="housing.tgz",
+        output_filename="housing.csv",
     )
-    etl.io.save_data(dataframe=train, path=train_save_path)
 
-    test_save_path = etl.io.get_path(
-        data_subdir=conf.DataDirectory.INTERIM, filename="housing_test.csv"
-    )
-    etl.io.save_data(dataframe=test, path=test_save_path)
+    housing_path = datasources.get_data("housing")
+    housing = io.load_data(housing_path)
+    train, test = preprocessing.train_test_split(housing)
 
-    etl.preprocessing.clean(train)
-    train_cleaned_path = etl.io.get_path(
-        data_subdir=conf.DataDirectory.INTERIM, filename="housing_train_prepared.csv"
+    train_save_path = utils.build_path(
+        root_data_dir=root_data_dir,
+        data_subdir=DataDirectory.INTERIM.value,
+        filename="housing_train.csv",
     )
-    etl.io.save_data(dataframe=train, path=train_cleaned_path)
+    io.save_data(dataframe=train, path=train_save_path)
+
+    test_save_path = utils.build_path(
+        root_data_dir=root_data_dir,
+        data_subdir=DataDirectory.INTERIM.value,
+        filename="housing_test.csv",
+    )
+    io.save_data(dataframe=test, path=test_save_path)
+
+    preprocessing.clean(train)
+    train_cleaned_path = utils.build_path(
+        root_data_dir=root_data_dir,
+        data_subdir=DataDirectory.INTERIM.value,
+        filename="housing_train_prepared.csv",
+    )
+    io.save_data(dataframe=train, path=train_cleaned_path)
 
 
 if __name__ == "__main__":
